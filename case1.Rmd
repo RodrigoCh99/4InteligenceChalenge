@@ -1,0 +1,482 @@
+---
+output: html_notebook
+---
+
+## **Exploratory Data Analysis - TFP (USA, CAN, MEX)**
+
+
+##### **What is TFP:**
+Total factor productivity (TFP) is a measure of productivity calculated by dividing economy-wide total production by the weighted average of inputs i.e. labor and capital. It represents growth in real output which is in excess of the growth in inputs such as labor and capital.
+
+**Importing:**
+```{r}
+# importing data from csv file:
+df <- read.table('data/TFP.csv',
+                 header = TRUE,
+                 sep = ',',
+                 dec = '.')
+```
+
+**Examine basic dataset information:**
+```{r}
+# first rows of dataframe:
+head(df)
+```
+
+
+**Basic exploration:**
+
+**Variables initial visualization:**
+```{r}
+# first column:
+unique(df$isocode)
+
+# second column:
+unique(df$year)
+
+# third column
+unique(df$rtfpna)
+```
+
+**Note:**
+
+- Apparently these columns are already in the correct type formats.
+- Data without 0 or NA values.
+- The data consists of 189 lines.
+- years range is 1950 to 2011.
+
+```{r warning=FALSE, include=FALSE}
+# installation of a useful package for exploratory analysis
+#install.packages("skimr")
+
+# importing package:
+library("skimr")
+```
+
+**View of data formats:**
+```{r warning=FALSE}
+str(df)
+
+# function of skimr package that expands the summary: 
+skim(df)
+```
+
+**Converting data to Time Series:**
+```{r warning=FALSE}
+# instalign extensible time series library:
+# install.packages('xts')
+
+# importing a more powerful library of manipulation time series:
+# library(xts)
+
+# new dataframes created slicing original dataframe
+df_USA <- subset(df, df$isocode == "USA")
+df_CAN <- subset(df, df$isocode == "CAN")
+df_MEX <- subset(df, df$isocode == "MEX")
+
+# time series of each country:
+ts_usa <- ts(df_USA$rtfpna, start = 1950)
+ts_can <- ts(df_CAN$rtfpna, start = 1950)
+ts_mex <- ts(df_MEX$rtfpna, start = 1950)
+```
+
+**histogram view of all time series:**
+```{r}
+# bether way to see data information:
+library(DataExplorer)
+
+# USA value distribution:
+plot_histogram(ts_usa, title = 'USA - RTF histogram')
+# CAN value distribution:
+plot_histogram(ts_can, title = 'CAN - RTF histogram')
+# MEX value distribution:  
+plot_histogram(ts_mex, title = 'MEX - RTF histogram')
+```
+**Note:**
+
+- ts_usa serie have a minimal constancy (0-1) frequency that extends over the years.
+- ts_usa have maximum frequency value in ~ 0.75
+- ts_can have most frequency values between 1 and 1.03
+- ts_can have maximum frequency value in 8
+- ts_mex have most frequency value between 1.0 and 1.2
+- ts_mex have maximum frequency value in 6
+- ts_mex have two spaced maximum in frequency.
+
+```{r message=FALSE, warning=FALSE}
+# loading library:
+library("plotly")
+
+m <- list(
+  l = 50,
+  r = 50,
+  b = 100,
+  t = 100,
+  pad = 4
+)
+
+# sequence of dates to plots:
+ts_years <- seq(from = 1950, to = 2011, by = 1)
+
+# setting figure of each country:
+fig_usa <- plot_ly(x = ts_years, y = ts_usa, mode = 'lines', type="scatter")
+
+# seting plot size:
+fig_usa <- fig_usa %>% layout(title = "Time serie - USA", autosize = F, width = 900, height = 500, margin = m)
+
+# visualization of usa ts:
+fig_usa
+```
+
+
+```{r message=FALSE, warning=FALSE}
+# stting figure of each country:
+fig_can <- plot_ly(x = ts_years, y = ts_can, mode = 'lines')
+
+# seting plot size:
+fig_can <- fig_can %>% layout(title = "Time serie - CAN", autosize = F, width = 900, height = 500, margin = m)
+
+# visualization of can ts:
+fig_can
+```
+
+```{r message=FALSE, warning=FALSE}
+# stting figure of each country:
+fig_mex <- plot_ly(x = ts_years, y = ts_mex, mode = 'lines')
+
+# seting plot size:
+fig_mex <- fig_mex %>% layout(title = "Time serie - MEX", autosize = F, width = 900, height = 500, margin = m)
+
+# visualization of mex ts:
+fig_mex
+```
+
+
+
+**Note:**
+
+- ts_usa have a positive trend.
+- ts_can have a most unstable trend.
+- ts_mex have down statarted ate 1981
+- the initial value of ts_can is higher than the others.
+- the initial value of ts_usa is low than the others.
+
+#### **Statistical tests:**
+
+**Autocorrelation test:**
+```{r}
+# autocorrelation test in usa:
+acf(ts_usa, plot = FALSE)
+
+# autocorrelation test in can:
+acf(ts_can, plot = FALSE)
+
+# autocorrelation test in mex:
+acf(ts_mex, plot = FALSE)
+```
+
+**Basic seasonal test:**
+```{r}
+# library for simple seasonal test:
+library(seastests)
+
+# seasonality test in usa:
+isSeasonal(ts_usa)
+
+# seasonality test in can:
+isSeasonal(ts_can)
+
+# seasonality test in mex:
+isSeasonal(ts_mex)
+```
+**Visualization of differenced data:**
+```{r message=FALSE, warning=FALSE}
+# sequence of dates to plots:
+ts_years <- seq(from = 1950, to = 2011, by = 1)
+
+# stting figure of each country:
+fig_usa <- plot_ly(x = ts_years[2:length(ts_years)], y = diff(ts_usa), mode = 'lines', type="scatter")
+
+# seting plot size:
+fig_usa <- fig_usa %>% layout(title = "Differenced Time serie - USA", autosize = F, width = 900, height = 500, margin = m)
+
+# visualization of usa ts:
+fig_usa
+```
+```{r message=FALSE, warning=FALSE}
+# stting figure of each country:
+fig_can <- plot_ly(x = ts_years[2:length(ts_years)], y = diff(ts_can), mode = 'lines')
+
+# seting plot size:
+fig_can <- fig_can %>% layout(title = "Differenced Time serie - CAN", autosize = F, width = 900, height = 500, margin = m)
+
+# visualization of can ts:
+fig_can
+```
+```{r message=FALSE, warning=FALSE}
+# stting figure of each country:
+fig_mex <- plot_ly(x = ts_years[2:length(ts_years)], y = diff(ts_mex), mode = 'lines')
+
+# seting plot size:
+fig_mex <- fig_mex %>% layout(title = "Differenced Time serie - MEX", autosize = F, width = 900, height = 500, margin = m)
+
+# visualization of mex ts:
+fig_mex
+```
+
+**Seasonal test with lagged difference:**
+```{r message=FALSE, warning=FALSE}
+# library for simple seasonal test:
+library(seastests)
+
+# seasonality test in usa:
+isSeasonal(diff(ts_usa))
+
+# seasonality test in can:
+isSeasonal(diff(ts_can))
+
+# seasonality test in mex:
+isSeasonal(diff(ts_mex))
+```
+**Stationary test in differenced values:**
+```{r message=FALSE, warning=FALSE}
+Box.test(ts_usa, lag=1, type="Ljung-Box")
+Box.test(ts_can, lag=1, type="Ljung-Box")
+Box.test(ts_mex, lag=1, type="Ljung-Box")
+```
+**Note:**
+
+- ts_can have smaller p-value (probably stationary).
+- ts_mex have bigger p-value.
+
+
+#### **Division in train set and test set:**
+```{r}
+# variables to adjust models:
+train_usa <- ts_usa[1:(length(ts_usa)-10)]
+train_can <- ts_can[1:(length(ts_can)-10)]
+train_mex <- ts_mex[1:(length(ts_mex)-10)]
+
+# variable for measuring results:
+test_usa <- ts_usa[(length(ts_usa)-9):length(ts_usa)]
+test_can <- ts_usa[(length(ts_can)-9):length(ts_can)]
+test_mex <- ts_usa[(length(ts_mex)-9):length(ts_mex)]
+```
+#### **Preditive model - auto.arima():**
+
+```{r message=FALSE, warning=FALSE}
+# library for auto.arima() model:
+library(forecast)
+
+# model fit:
+arima_usa <- auto.arima( train_usa )
+arima_can <- auto.arima( train_can )
+arima_mex <- auto.arima( train_mex )
+```
+**residuals of each model:**
+```{r}
+# usa:
+checkresiduals(arima_usa)
+# can:
+checkresiduals(arima_can)
+# mex:
+checkresiduals(arima_mex)
+```
+**Note:**
+
+- canadian model is the most complex.
+
+**forecasting:**
+```{r}
+forecast_usa <- forecast(arima_usa, 10)
+forecast_can <- forecast(arima_can, 10)
+forecast_mex <- forecast(arima_mex, 10)
+```
+
+**Model accuracy measurement:**
+```{r}
+accuracy(forecast_usa, test_usa)
+accuracy(forecast_can, test_can)
+accuracy(forecast_mex, test_mex)
+```
+**Note:**
+
+- MAPE: 1.01 to usa.
+- MAPE: 4.8 to canada.
+- MAPE: 2.4 to mexico.
+- models overfitting?
+
+```{r message=FALSE, warning=FALSE}
+# usa forecasting plot
+plot(forecast_usa)
+# can forecasting plot
+plot(forecast_can)
+# mex forecasting plot
+plot(forecast_mex)
+```
+**Model fitting with seasonal component:**
+```{r message=FALSE, warning=FALSE}
+# usa model fit:
+arima_usa <- auto.arima( train_usa, D = 1)
+# can model fit:
+arima_can <- auto.arima( train_can, D = 1)
+# mex model fit:
+arima_mex <- auto.arima( train_mex, D = 1)
+# usa model forecasting:
+forecast_usa <- forecast(arima_usa, 10)
+# can model forecasting:
+forecast_can <- forecast(arima_can, 10)
+# mex model forecasting:
+forecast_mex <- forecast(arima_mex, 10)
+# resuidual usa arima:
+checkresiduals(arima_usa)
+# resuidual can arima:
+checkresiduals(arima_can)
+# resuidual mex arima:
+checkresiduals(arima_mex)
+# acurracy test usa:
+accuracy(forecast_usa, test_usa)
+# acurracy test can:
+accuracy(forecast_can, test_can)
+# acurracy test mex:
+accuracy(forecast_mex, test_mex)
+```
+**Note:**
+
+- the seasonal component really don't have impact in the model.
+
+**Model fitting with logarithmic transformation:**
+```{r message=FALSE, warning=FALSE}
+# usa model fit:
+arima_usa <- auto.arima( log(train_usa) )
+# can model fit:
+arima_can <- auto.arima( log(train_can) )
+# mex model fit:
+arima_mex <- auto.arima( log(train_mex) )
+# usa model forecasting:
+forecast_usa <- forecast(arima_usa, 10)
+# can model forecasting:
+forecast_can <- forecast(arima_can, 10)
+# mex model forecasting:
+forecast_mex <- forecast(arima_mex, 10)
+# resuidual usa arima:
+checkresiduals(arima_usa)
+# resuidual can arima:
+checkresiduals(arima_can)
+# resuidual mex arima:
+checkresiduals(arima_mex)
+# acurracy test usa:
+accuracy(forecast_usa, test_usa)
+# acurracy test can:
+accuracy(forecast_can, test_can)
+# acurracy test mex:
+accuracy(forecast_mex, test_mex)
+```
+**Note:**
+
+- the logarithmic transformation really don't have impact in the model.
+
+#### **Preditive model - tbats():**
+```{r}
+# usa model fit:
+tbats_usa <- tbats( train_usa )
+# can model fit:
+tbats_can <- tbats( train_can )
+# mex model fit:
+tbats_mex <- tbats( train_mex )
+
+# resuidual usa arima:
+checkresiduals( tbats_usa )
+# resuidual can arima:
+checkresiduals( tbats_can )
+# resuidual mex arima:
+checkresiduals( tbats_mex )
+
+# usa model forecasting:
+forecast_usa <- forecast(tbats_usa, 10)
+# can model forecasting:
+forecast_can <- forecast(tbats_can, 10)
+# mex model forecasting:
+forecast_mex <- forecast(tbats_mex, 10)
+
+# acurracy test usa:
+accuracy(forecast_usa, test_usa)
+# acurracy test can:
+accuracy(forecast_can, test_can)
+# acurracy test mex:
+accuracy(forecast_mex, test_mex)
+```
+
+####**Preditive model - simple exponential smoothing:**
+```{r}
+# usa model fit:
+ss_usa <- ses( train_usa, 10 )
+# can model fit:
+ss_can <- ses( train_can, 10 )
+# mex model fit:
+ss_mex <- ses( train_mex, 10 )
+
+# resuidual usa arima:
+checkresiduals( ss_usa )
+# resuidual can arima:
+checkresiduals( ss_can )
+# resuidual mex arima:
+checkresiduals( ss_mex )
+
+# acurracy test usa:
+accuracy(ss_usa, test_usa)
+# acurracy test can:
+accuracy(ss_can, test_can)
+# acurracy test mex:
+accuracy(ss_mex, test_mex)
+```
+#### **Table of metrics (MAPE):**
+Model | USA | CAN | MEX
+-----:|----:|----:|----:|
+**ARIMA** | 1.01| 4.8 | 2.4 |
+**TBATS** | 1.04| 3.9 | 2.4 |
+**SES** | 3.81| 5.47 | 4.1 |
+
+
+
+### **Conclusions:**
+- **Best model to forecast EUA = ARIMA(0,1,0) - MAPE=1.019562**
+- **Best model to forecast CAN = BATS - MAPE=3.946551**
+- **Best model to forecast MEX = ARIMA(0,2,1) - MAPE=2.401825**
+- **Best model to mex is arima because it is a less complex model**
+
+## **Final forecast for case 1:**
+```{r}
+# variables to adjust models:
+train_usa <- ts_usa[1:length(ts_usa)]
+train_can <- ts_can[1:length(ts_can)]
+train_mex <- ts_mex[1:length(ts_mex)]
+
+# model fit:
+final_arima_usa <- auto.arima( train_usa )
+final_tbats_can <- tbats( train_can )
+final_arima_mex <- auto.arima( train_mex )
+
+# model forecasting:
+final_forecast_usa <- forecast(final_arima_usa, 10)
+final_forecast_can <- forecast(final_tbats_can, 10)
+final_forecast_mex <- forecast(final_arima_mex, 10)
+
+# visualization in plot:
+plot(final_forecast_usa)
+plot(final_forecast_can)
+plot(final_forecast_mex)
+```
+
+### **Can you think about another feature that could be helpful in explaining TFP series? Explain.**
+according to the wikipedia the main criticism of FTP is the word "total" as it suggests that all entries should be included but, some inputs such as energy are never included.
+
+I suggest include mean level of household energy consumption.I do not know how to get this data but with the recent popularization  of open data  culture around the world it is possible that the open data portals like www.data.gov (USA), open.canada (CAN) and developmentseed.org (MEX) can be good starting points
+
+#### **Useful links and references:**
+
+- [**Exploratory data analysis in r introduction**](https://dzone.com/articles/exploratory-data-analysis-in-r-introduction)
+- [**Book/site - Exploratory data analysis**](https://r4ds.had.co.nz/exploratory-data-analysis.html)
+- [**Exploratory data analysis in r introduction (Medium)**](https://towardsdatascience.com/exploratory-data-analysis-in-r-for-beginners-fe031add7072)
+- [**Tutorial golf examples:**](https://towardsdatascience.com/using-r-for-exploratory-data-analysis-eda-analyzing-golf-stats-812b5feb077a)
+- [**Site about plots**](https://www.r-graph-gallery.com/163-interactive-area-chart-plotly.html)
+- [**datacamp lesson about trend**](https://campus.datacamp.com/courses/time-series-analysis-in-r/predicting-the-future?ex=3)
