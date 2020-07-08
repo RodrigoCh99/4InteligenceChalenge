@@ -1,0 +1,457 @@
+---
+output: html_notebook
+---
+
+## **Exploratory Data Analysis - Brazilian Imports/Exports**
+
+official data source for brazilian exports e imports, maintened by the government. The dataset contains all trackings of monthly imports and exports of a range of products (soybeans, soybean meal, soybean oil, corn, wheat and sugar), by brazilian states, by routes (air, sea, ground, etc) e from/to which country;
+
+**Importing:**
+```{r message=FALSE, warning=FALSE}
+# useful library 
+# install.packages("tidyverse")
+
+# loading library:
+library("tidyverse")
+
+# importing data from csv file:
+df <- read.table('data/data_comexstat.csv',
+                 header = TRUE,
+                 sep = ',',
+                 dec = '.')
+```
+
+**Examine basic dataset information:**
+```{r}
+# first rows of dataframe:
+head(df)
+```
+
+## **Questions:**
+
+##### **Show the evolution of total monthly and total annual exports from Brazil (all states and to everywhere) of ‘soybeans’, ‘soybean oil’ and ‘soybean meal’**
+
+Division in import set and export set:
+```{r}
+# import set
+df_import <- subset(df, df$type == 'Import')
+# removing useless column:
+df_import <- df_import[-c(5)]
+```
+
+```{r}
+# export set
+df_export <- subset(df, df$type == 'Export')
+# removing useless column:
+df_export <- df_export[-c(5)]
+```
+
+slicing by product
+```{r}
+# subseting by product
+soybeans <- subset(df_export, df_export$product == 'soybeans')
+# removing useless column:
+soybeans <- soybeans[-c(2, 3 ,4 ,5 ,6)]
+# subseting by product:
+oil <- subset(df_export, df_export$product == 'soybean_oil')
+# removing useless column:
+oil <- oil[-c(2, 3 ,4 ,5 ,6)]
+# subseting by product
+meat <- subset(df_export, df_export$product == 'soybean_meal')
+# removing useless column:
+meat <- meat[-c(2, 3 ,4 ,5 ,6)]
+```
+
+function that creates new columns 
+```{r}
+YearMonth <- function(df) {
+  for (i in 1:nrow(df)) {
+    df[i, 'year'] = substr(df[i, 1], 1, 4)
+    df[i, 'month'] = substr(df[i, 1], 6, 7)
+  }
+  return(df)
+}
+
+# add new columns to soybeans
+soybeans <- YearMonth(soybeans)
+soybeans <- soybeans[c("date", "year", "month", "usd")]
+
+# add new columns to oil
+oil <- YearMonth(oil)
+oil <- oil[c("date", "year", "month", "usd")]
+
+# add new columns to meat
+meat <- YearMonth(meat)
+meat <- meat[c("date", "year", "month", "usd")]
+```
+
+grouping data by year:
+```{r message=FALSE, warning=FALSE}
+soybeans_year <- soybeans %>% 
+  group_by(year) %>% 
+    summarize(usd_return = sum(usd))
+
+oil_year <- oil %>% 
+  group_by(year) %>% 
+    summarize(usd_return = sum(usd))
+
+meat_year <- meat %>% 
+  group_by(year) %>% 
+    summarize(usd_return = sum(usd))
+
+```
+
+grouping data by month:
+```{r message=FALSE, warning=FALSE}
+soybeans_month <- soybeans %>% 
+  group_by(month) %>% 
+    summarize(usd_return = sum(usd))
+
+oil_month <- oil %>% 
+  group_by(month) %>% 
+    summarize(usd_return = sum(usd))
+
+meat_month <- meat %>% 
+  group_by(month) %>% 
+    summarize(usd_return = sum(usd))
+
+```
+
+Visualization:
+```{r}
+# soybeans
+ggplot(soybeans_year, aes(x = year, y = usd_return)) +
+  geom_col(fill = "lightgreen") +
+  labs(title = "Total annual exports from Brazil",
+       subtitle = "soybeans",
+       x = "Year",
+       y = "dollar")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+# oil
+ggplot(oil_year, aes(x = year, y = usd_return)) +
+  geom_col(fill = "green") +
+  labs(title = "Total annual exports from Brazil",
+       subtitle = "soybean oil",
+       x = "Year",
+       y = "dollar")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+# meat
+ggplot(meat_year, aes(x = year, y = usd_return)) +
+  geom_col(fill = "darkgreen") +
+  labs(title = "Total annual exports from Brazil",
+       subtitle = "soybean meat",
+       x = "Year",
+       y = "dollar")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Visualization 2:
+```{r}
+# soybeans
+ggplot(soybeans_month, aes(x = month, y = usd_return)) +
+  geom_col(fill = "lightgreen") +
+  labs(title = "Total monthly exports from Brazil",
+       subtitle = "soybeans",
+       x = "month",
+       y = "dollar")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+# oil
+ggplot(oil_month, aes(x = month, y = usd_return)) +
+  geom_col(fill = "green") +
+  labs(title = "Total monthly exports from Brazil",
+       subtitle = "soybean oil",
+       x = "month",
+       y = "dollar")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+# meat
+ggplot(meat_month, aes(x = month, y = usd_return)) +
+  geom_col(fill = "darkgreen") +
+  labs(title = "Total monthly exports from Brazil",
+       subtitle = "soybean meat",
+       x = "month",
+       y = "dollar")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+##### **What are the 3 most important products exported by Brazil in the last 5 years?**
+```{r message=FALSE, warning=FALSE}
+# export set
+df_export <- subset(df, df$type == 'Export')
+
+# removing useless column:
+df_export <- df_export[-c(5)]
+
+# new dataframe of last 5 years:
+last5 <- subset(df_export, substr(df$date, 1, 4) == c('2015', '2016', '2017', '2018', '2019'))
+# grop by usd return:
+product_last5 <- last5 %>% 
+  group_by(product) %>% 
+    summarize(usd_return = sum(usd))
+# sort by dollar return:
+product_last5 <- product_last5 %>% arrange(desc(usd_return))
+```
+
+Answer visualization:
+
+**Product** | **Usd return** | 
+-----:|----:|
+**soybeans** | 11537411578| 
+**sugar** | 3056523437| 
+**soybean_meal** | 1915488713| 
+
+
+##### **What are the main routes through which Brazil have been exporting ‘corn’ in the last few years? Are there differences in the relative importance of routes depending on the product?**
+
+creating datframe:
+```{r}
+# creating a new dataframe with cont exportation in the last 5 years:
+corn_last5 <- subset(last5, last5$product == 'corn')
+# removing useless column:
+corn_last5 <- corn_last5[-c(2)]
+```
+
+group by route:
+```{r}
+# counting route use:
+best_rote <- corn_last5 %>% 
+  count(route)
+
+# sort by dollar return:
+best_rote <- best_rote %>% arrange(desc(n))
+```
+Answer visualization:
+
+**Main rote of corn**|**Number of uses from 2015 to 2019**|
+-----:|----:|
+**Sea** | 294|
+
+test with another product:
+```{r}
+last5 %>% 
+  group_by(product, route) %>% 
+    count(route)
+```
+
+Answer visualization 2:
+
+- the most important route of all products is the sea.
+
+#### **Which countries have been the most important trade partners for Brazil in terms of ‘corn’ and ‘sugar’ in the last 3 years?**
+
+```{r message=FALSE, warning=FALSE}
+# export set
+df_export <- subset(df, df$type == 'Export')
+
+# removing useless column:
+df_export <- df_export[-c(5)]
+
+# last 3 years dataset:
+last3 <- subset(df_export, substr(df$date, 1, 4) == c('2017', '2018', '2019'))
+
+# filtering by products:
+last3_sugar <- subset(last3, last3$product == 'sugar')
+last3_corn <- subset(last3, last3$product == 'corn')
+
+# sugar group by usd return:
+sugartop <- last3_sugar %>%
+  group_by(country) %>%
+    summarize(usd_return = sum(usd)) 
+  
+# corn group by usd return:
+corntop <- last3_corn %>%
+  group_by(country) %>%
+    summarize(usd_return = sum(usd))
+
+# sorting valaues:
+sugartop <- sugartop %>% arrange(desc(usd_return))
+corntop <- corntop %>% arrange(desc(usd_return))
+```
+Answer visualization:
+
+**the most important trade partners for Brazil in terms of sugar:**|
+
+**Country** | **Usd return** 
+-----:|----:|
+China	|235497558			
+Algeria	|214996453			
+Bangladesh	|160869294	
+
+**the most important trade partners for Brazil in terms of corn:**|
+
+**Country** | **Usd return**
+-----:|----:|
+Vietnam| 185670299			
+Spain| 107624116			
+Iran| 98786485		
+
+
+#### **For each of the products in the dataset, show the 5 most important states in terms of exports:**
+```{r message=FALSE, warning=FALSE}
+# export set
+df_export <- subset(df, df$type == 'Export')
+
+# removing useless column:
+df_export <- df_export[-c(5)]
+
+# grouping data by product and country:
+important_states <- df_export %>% 
+  group_by(product, state) %>% 
+    summarize(usd_return = sum(usd))
+
+# slicing by product to plot:
+corn_states <- subset(important_states, important_states$product == 'corn')
+meal_states <- subset(important_states, important_states$product == 'soybean_meal')
+oil_states <- subset(important_states, important_states$product == 'soybean_oil')
+soybeans_states <- subset(important_states, important_states$product == 'soybeans')
+wheat_states <- subset(important_states, important_states$product == 'wheat')
+
+# sorting:
+corn_states <- corn_states %>% arrange(desc(usd_return))
+meal_states <- meal_states %>% arrange(desc(usd_return))
+oil_states <- oil_states %>% arrange(desc(usd_return))
+soybeans_states <- soybeans_states %>% arrange(desc(usd_return))
+wheat_states <- wheat_states %>% arrange(desc(usd_return))
+
+# corn plot:
+ggplot(corn_states[1:5,], aes(x = state, y = usd_return)) +
+  geom_col(fill = "yellow") +
+  labs(title = "5 most important states in corn exportation",
+       subtitle = "1997-2019",
+       x = "State",
+       y = "Dollar")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# meal plot:
+ggplot(meal_states[1:5,], aes(x = state, y = usd_return)) +
+  geom_col(fill = "red") +
+  labs(title = "5 most important states in soybean meal exportation",
+       subtitle = "1997-2019",
+       x = "State",
+       y = "Dollar")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# oil plot:
+ggplot(oil_states[1:5,], aes(x = state, y = usd_return)) +
+  geom_col(fill = "orange") +
+  labs(title = "5 most important states in soybean oil exportation",
+       subtitle = "1997-2019",
+       x = "State",
+       y = "Dollar")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# soybean plot:
+ggplot(soybeans_states[1:5,], aes(x = state, y = usd_return)) +
+  geom_col(fill = "green") +
+  labs(title = "5 most important states in soybean exportation",
+       subtitle = "1997-2019",
+       x = "State",
+       y = "Dollar")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# oil plot:
+ggplot(wheat_states[1:5,], aes(x = state, y = usd_return)) +
+  geom_col(fill = "lightgreen") +
+  labs(title = "5 most important states in wheat exportation",
+       subtitle = "1997-2019",
+       x = "State",
+       y = "Dollar")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+**observation:**
+
+- some lines in dataframe have errors like: Cote DIvore,Export,Sea,6000,1
+- these errors have been ignored until now because they do not interfere in the general analysis.
+
+#### **What should be the total Brazilian soybeans, soybean_meal, and corn export forecasts, in tons, for the next 11 years (2020-2030) [Yearly]?**
+
+```{r message=FALSE, warning=FALSE}
+# export set
+df_export <- subset(df, df$type == 'Export')
+
+# removing useless column:
+df_export <- df_export[-c(5)]
+
+# add new columns to soybeans
+df_forecast <- YearMonth(df_export)
+
+# nwe sort of columns:
+df_forecast <- df_forecast[c("date", "year", "month", "product", "state", "country", "route", "tons",  "usd")]
+
+# filter by product
+soybeans <- subset(df_forecast, df_forecast$product == "soybeans")
+soybean_meal <- subset(df_forecast, df_forecast$product == "soybean_meal")
+corn <- subset(df_forecast, df_forecast$product == "corn")
+
+# removing useless column:
+soybeans <- soybeans[-c(1, 4)]
+soybean_meal <- soybean_meal[-c(1, 4)]
+corn <- corn[-c(1, 4)]
+
+# year:
+s <- soybeans %>% 
+  group_by(year) %>%
+    summarize(totalton = sum(tons))
+
+m <- soybean_meal %>% 
+  group_by(year) %>%
+    summarize(totalton = sum(tons))
+
+c <- corn %>% 
+  group_by(year) %>%
+    summarize(totalton = sum(tons))
+
+# visualization:
+s$year
+m$year
+c$year
+
+# adding 2003 to m and c dataframes:
+df_2003 = data.frame(year=c('2003'), totalton = c(0))
+
+m <- rbind(m[1:6,], df_2003, m[7:22,])
+c <- rbind(c[1:6,], df_2003, c[7:22,])
+```
+
+in this case I importing coovariates using R studio functions:
+```{r}
+# basic view
+head(covariates)
+
+# filtering by interest range:
+covariate_df <- covariates[19:41,]
+
+# new dataframes:
+soybeans_df <- covariates[19:41,]
+soybeans_df['totalTon'] <- s['totalton']
+
+meal_df <- covariates[19:41,]
+meal_df['totalTon'] <- m['totalton']
+
+corn_df <- covariates[19:41,]
+corn_df['totalTon'] <- c['totalton']
+```
+spliting data into train and test:
+```{r}
+# train:
+soybeans_train <- soybeans_df[1:16,]
+meal_train <- meal_df[1:16,]
+corn_train <- corn_df[1:16,]
+# test:
+soybeans_test <- soybeans_df[16:23,]
+meal_test <- meal_df[16:23,]
+corn_test <- corn_df[16:23,]
+```
+Importing library to use random forest model:
+```{r message=FALSE, warning=FALSE}
+# install.packages("randomForest")
+library(randomForest)
+
+print('I was unable to complete the modeling in the time available, but from here I would use the random forest or some other model to make the predictions')
+```
+
+
+links interessantes:
+
+https://www.r-bloggers.com/how-to-implement-random-forests-in-r/
+
+
